@@ -1,0 +1,572 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kafka GitOps — Sign in</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <style>
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      html, body { height: 100%; }
+      body {
+        font-family: Inter, system-ui, -apple-system, sans-serif;
+        background: #060b15;
+        color: #dde3ed;
+      }
+      button, input { font: inherit; border: 0; }
+      button { cursor: pointer; }
+
+      /* ── Shell ── */
+      .lp-shell {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        min-height: 100dvh;
+        padding: 20px;
+        gap: 20px;
+      }
+
+      /* ── Left hero — CSS gradient background ── */
+      .lp-hero {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 56px 60px;
+        overflow: hidden;
+        background: #080e1c;
+        border-radius: 28px;
+        box-shadow: 0 24px 60px rgba(0,0,0,.55);
+        border: 1px solid rgba(42,56,80,.5);
+      }
+
+      /* dot-grid */
+      .lp-hero::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        background-image:
+          linear-gradient(rgba(47,159,232,.07) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(47,159,232,.07) 1px, transparent 1px);
+        background-size: 46px 46px;
+        mask-image: radial-gradient(ellipse 80% 80% at 40% 50%, black 20%, transparent 100%);
+      }
+
+      /* blue ambient glow */
+      .lp-hero::after {
+        content: "";
+        position: absolute;
+        top: 5%;
+        left: -10%;
+        width: 70%;
+        height: 80%;
+        background: radial-gradient(ellipse, rgba(23,105,224,.18) 0%, transparent 65%);
+        pointer-events: none;
+        border-radius: 50%;
+      }
+
+      /* raven watermark bottom-right — invert so black→white, then fade */
+      .lp-raven-bg {
+        position: absolute;
+        bottom: -30px;
+        right: -40px;
+        width: 400px;
+        height: 400px;
+        object-fit: contain;
+        pointer-events: none;
+        user-select: none;
+        z-index: 0;
+        filter: invert(1);
+        opacity: .06;
+      }
+
+      .lp-hero-inner {
+        position: relative;
+        z-index: 1;
+        max-width: 500px;
+      }
+
+      /* brand logo — full horizontal, no box */
+      .lp-brand {
+        margin-bottom: 52px;
+      }
+      .lp-brand-logo {
+        display: block;
+        width: 100px;
+        height: 100px;
+        object-fit: contain;
+        filter: brightness(0) invert(1);
+      }
+
+      /* headline */
+      .lp-headline {
+        font-size: clamp(34px, 3.4vw, 50px);
+        font-weight: 800;
+        line-height: 1.1;
+        letter-spacing: -.5px;
+        color: #fff;
+        margin-bottom: 18px;
+      }
+      .lp-headline em {
+        font-style: normal;
+        color: #5ab4f8;
+      }
+
+      .lp-desc {
+        color: #6e8099;
+        font-size: 15px;
+        line-height: 1.7;
+        max-width: 390px;
+        margin-bottom: 40px;
+      }
+
+      /* feature list */
+      .lp-features {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .lp-feature {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: #8fa4bc;
+        font-size: 13.5px;
+        font-weight: 500;
+      }
+      .lp-feature-dot {
+        flex-shrink: 0;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #5ab4f8;
+        box-shadow: 0 0 0 4px rgba(90,180,248,.18);
+      }
+
+      /* ── Right — floating rounded card ── */
+      .lp-panel {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .lp-card {
+        width: 100%;
+        max-width: 380px;
+        padding: 28px 40px 24px;
+        background: #0e1826;
+        border: 1px solid rgba(42,56,80,.85);
+        border-radius: 28px;
+        box-shadow: 0 24px 60px rgba(0,0,0,.55);
+      }
+
+      /* icon-only logo in card */
+      .lp-card-logo {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 16px;
+      }
+      .lp-card-logo img {
+        width: 96px;
+        height: 96px;
+        object-fit: contain;
+      }
+
+      /* thin divider under logo */
+      .lp-card-rule {
+        height: 1px;
+        background: rgba(42,56,80,.8);
+        margin: 0 0 18px;
+      }
+
+      .lp-form-title {
+        font-size: 20px;
+        font-weight: 700;
+        color: #fff;
+        text-align: center;
+        margin-bottom: 4px;
+      }
+      .lp-form-sub {
+        color: #4a6070;
+        font-size: 13px;
+        text-align: center;
+        margin-bottom: 18px;
+      }
+
+      .lp-form {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .lp-field {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+      }
+      .lp-field label {
+        font-size: 11px;
+        font-weight: 700;
+        color: #4a6070;
+        text-transform: uppercase;
+        letter-spacing: .5px;
+      }
+
+      .lp-pw-wrap { position: relative; }
+
+      .lp-field input {
+        width: 100%;
+        height: 46px;
+        padding: 0 44px 0 15px;
+        border: 1px solid #1c2d42;
+        border-radius: 10px;
+        background: #080e1c;
+        color: #dde3ed;
+        font-size: 14px;
+        transition: border-color .15s, box-shadow .15s;
+      }
+      .lp-field input::placeholder { color: #253648; }
+      .lp-field input:focus {
+        outline: 0;
+        border-color: #5ab4f8;
+        box-shadow: 0 0 0 3px rgba(90,180,248,.15);
+      }
+
+      .lp-eye {
+        position: absolute;
+        top: 50%;
+        right: 11px;
+        transform: translateY(-50%);
+        display: grid;
+        place-items: center;
+        width: 28px;
+        height: 28px;
+        background: transparent;
+        color: #253648;
+        transition: color .15s;
+      }
+      .lp-eye:hover { color: #6e8099; }
+      .lp-eye svg {
+        display: block;
+        width: 16px;
+        height: 16px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 1.8;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .lp-error {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 10px 13px;
+        border-radius: 8px;
+        background: rgba(224,85,80,.1);
+        border: 1px solid rgba(224,85,80,.22);
+        color: #e05550;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .lp-error svg {
+        flex-shrink: 0;
+        width: 15px;
+        height: 15px;
+        stroke: #e05550;
+        fill: none;
+        stroke-width: 2;
+        stroke-linecap: round;
+      }
+
+      .lp-submit {
+        width: 100%;
+        height: 46px;
+        margin-top: 2px;
+        border-radius: 10px;
+        background: #1769e0;
+        color: #fff;
+        font-size: 15px;
+        font-weight: 650;
+        letter-spacing: .1px;
+        transition: background .15s, transform .12s;
+      }
+      .lp-submit:hover:not(:disabled) { background: #1260d3; }
+      .lp-submit:active:not(:disabled) { transform: translateY(1px); }
+      .lp-submit:disabled { opacity: .6; cursor: not-allowed; }
+
+      .lp-divider {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-top: 14px;
+        color: #1c2d42;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: .4px;
+      }
+      .lp-divider::before,
+      .lp-divider::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: #1c2d42;
+      }
+
+      .lp-hint {
+        margin-top: 12px;
+        color: #2e4255;
+        font-size: 12px;
+        text-align: center;
+      }
+      .lp-hint code {
+        padding: 2px 6px;
+        border-radius: 4px;
+        background: #080e1c;
+        color: #4a6070;
+        font-family: ui-monospace, "Cascadia Code", monospace;
+        font-size: 11px;
+      }
+
+      /* shake */
+      @keyframes lp-shake {
+        0%,100% { transform: translateX(0); }
+        20%      { transform: translateX(-6px); }
+        40%      { transform: translateX(6px); }
+        60%      { transform: translateX(-3px); }
+        80%      { transform: translateX(3px); }
+      }
+      .lp-shake { animation: lp-shake .4s ease; }
+
+      /* ── Transition out ── */
+      .lp-shell {
+        transition: gap .5s ease;
+      }
+      .lp-hero {
+        transition: opacity .3s ease, transform .5s cubic-bezier(.4,0,.2,1);
+      }
+      .lp-panel {
+        position: relative;
+      }
+
+      /* full-screen curtain that expands from the card panel */
+      .lp-curtain {
+        position: fixed;
+        inset: 0;
+        background: #080e1c;
+        z-index: 999;
+        clip-path: inset(0 100% 0 0);
+        transition: clip-path .55s cubic-bezier(.7,0,.3,1);
+        pointer-events: none;
+      }
+      .lp-curtain.run {
+        clip-path: inset(0 0% 0 0);
+      }
+
+      /* logo + text fade in center of curtain */
+      .lp-curtain-brand {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+        opacity: 0;
+        transition: opacity .25s ease .35s;
+      }
+      .lp-curtain-brand img {
+        width: 72px;
+        height: 72px;
+        object-fit: contain;
+        filter: brightness(0) invert(1);
+      }
+      .lp-curtain-brand span {
+        font-size: 22px;
+        font-weight: 800;
+        color: #fff;
+        letter-spacing: -.3px;
+      }
+      .lp-curtain-brand span em {
+        font-style: normal;
+        color: #5ab4f8;
+      }
+      .lp-curtain.run .lp-curtain-brand {
+        opacity: 1;
+      }
+
+      .lp-shell.lp-out .lp-hero {
+        opacity: 0;
+        transform: translateX(-24px);
+      }
+
+      /* ── Mobile ── */
+      @media (max-width: 820px) {
+        .lp-shell {
+          grid-template-columns: 1fr;
+          gap: 16px;
+          padding: 16px;
+        }
+        .lp-hero {
+          padding: 40px 28px 36px;
+          min-height: auto;
+        }
+        .lp-card { padding: 36px 28px 28px; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="lp-curtain" id="curtain">
+      <div class="lp-curtain-brand">
+        <img src="pictures/icon.png" alt="" />
+        <span>Kafka <em>GitOps</em></span>
+      </div>
+    </div>
+
+    <div class="lp-shell">
+
+      <!-- ── Left hero ── -->
+      <div class="lp-hero">
+        <img src="pictures/logo.png" alt="" class="lp-raven-bg" aria-hidden="true" />
+        <div class="lp-hero-inner">
+
+          <h1 class="lp-headline">
+            Kafka <em>GitOps</em>
+          </h1>
+
+          <p class="lp-desc">
+            The modern way to manage, observe and automate
+            your Kafka infrastructure — from topics to production deployments.
+          </p>
+
+          <div class="lp-features">
+            <div class="lp-feature">
+              <span class="lp-feature-dot"></span>
+              Kafka monitoring, consumer lag &amp; topic health
+            </div>
+            <div class="lp-feature">
+              <span class="lp-feature-dot"></span>
+              GitOps sync across 4 connected repositories
+            </div>
+            <div class="lp-feature">
+              <span class="lp-feature-dot"></span>
+              PR workflow with CI gates &amp; reviewer status
+            </div>
+            <div class="lp-feature">
+              <span class="lp-feature-dot"></span>
+              6-environment deployment pipeline tracking
+            </div>
+            <div class="lp-feature">
+              <span class="lp-feature-dot"></span>
+              Prometheus SLO, burn rate &amp; latency metrics
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Right card ── -->
+      <div class="lp-panel">
+        <div class="lp-card">
+
+          <div class="lp-card-logo">
+            <img src="pictures/icon.png" alt="Kafka GitOps" />
+          </div>
+          <div class="lp-card-rule"></div>
+
+          <h2 class="lp-form-title">Sign in</h2>
+          <p class="lp-form-sub">Enter your credentials to continue</p>
+
+          <form class="lp-form" id="loginForm" novalidate>
+
+            <div class="lp-field">
+              <label for="username">Username</label>
+              <div class="lp-pw-wrap">
+                <input type="text" id="username" name="username"
+                  autocomplete="username" placeholder="Username" />
+              </div>
+            </div>
+
+            <div class="lp-field">
+              <label for="password">Password</label>
+              <div class="lp-pw-wrap">
+                <input type="password" id="password" name="password"
+                  autocomplete="current-password" placeholder="Password" />
+                <button class="lp-eye" type="button" id="togglePass"
+                  aria-label="Show password" tabindex="-1">
+                  <svg id="eyeIcon" viewBox="0 0 24 24">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="lp-error" id="loginError" hidden>
+              <svg viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+              Invalid username or password
+            </div>
+
+            <button class="lp-submit" type="submit" id="loginBtn">Sign in</button>
+          </form>
+
+          <div class="lp-divider">demo</div>
+          <p class="lp-hint"><code>admin</code> / <code>admin</code></p>
+
+        </div>
+      </div>
+
+    </div>
+
+    <script>
+      const passInput  = document.getElementById("password");
+      const togglePass = document.getElementById("togglePass");
+
+      togglePass.addEventListener("click", () => {
+        const show = passInput.type === "password";
+        passInput.type = show ? "text" : "password";
+        document.getElementById("eyeIcon").innerHTML = show
+          ? '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/>'
+          : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+      });
+
+      document.getElementById("loginForm").addEventListener("submit", (e) => {
+        e.preventDefault();
+        const user = document.getElementById("username").value.trim();
+        const pass = passInput.value;
+        const err  = document.getElementById("loginError");
+        const btn  = document.getElementById("loginBtn");
+
+        if (user === "admin" && pass === "admin") {
+          btn.textContent = "Signing in…";
+          btn.disabled = true;
+          const shell   = document.querySelector(".lp-shell");
+          const curtain = document.getElementById("curtain");
+          shell.classList.add("lp-out");
+          requestAnimationFrame(() => requestAnimationFrame(() => {
+            curtain.classList.add("run");
+          }));
+          setTimeout(() => { window.location.href = "index.html"; }, 1000);
+        } else {
+          err.hidden = false;
+          passInput.value = "";
+          passInput.focus();
+          document.querySelector(".lp-card").classList.add("lp-shake");
+          setTimeout(() => document.querySelector(".lp-card").classList.remove("lp-shake"), 450);
+        }
+      });
+
+      ["username", "password"].forEach((id) =>
+        document.getElementById(id).addEventListener("input", () => {
+          document.getElementById("loginError").hidden = true;
+        })
+      );
+    </script>
+  </body>
+</html>
