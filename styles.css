@@ -91,12 +91,12 @@ svg {
   position: relative;
   height: 100dvh;
   overflow: hidden;
-  padding: var(--page-pad);
+  padding: var(--page-pad) var(--page-pad) 0 var(--page-pad);
 }
 
 .sidebar {
   position: fixed;
-  inset: var(--page-pad) auto var(--page-pad) var(--page-pad);
+  inset: var(--page-pad) auto 0 var(--page-pad);
   z-index: 1;
   display: flex;
   flex-direction: column;
@@ -359,12 +359,12 @@ svg {
 .workspace {
   position: relative;
   z-index: 3;
-  height: calc(100dvh - (var(--page-pad) * 2));
+  height: 100dvh;
   width: calc(100vw - var(--closed-offset) - (var(--page-pad) * 2));
   padding: 0;
   overflow: visible;
   border: 1px solid rgba(220, 227, 236, .92);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   background: var(--app-bg);
   box-shadow: var(--shadow-panel);
   transform: translateX(var(--closed-offset));
