@@ -12,6 +12,10 @@ const icons = {
   bell: '<svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>',
   close: '<svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>',
   layers: '<svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><polygon points="12 2 22 8.5 12 15 2 8.5"/><polyline points="2 15.5 12 22 22 15.5"/><polyline points="2 12 12 18.5 22 12"/></svg>',
+  pod: '<svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>',
+  github: '<svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.4 5.4 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>',
+  cloud: '<svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>',
+  alert: '<svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
   moon: '<svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>',
   sun:  '<svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>'
 };
@@ -59,13 +63,14 @@ const pageTitles = {
   workflow: "PR Workflow",
   kafka: "Kafka Monitoring",
   prometheus: "Prometheus Metrics",
-  tdd: "TDD Overview",
+  ocp: "OCP Pods",
   deployments: "Deployments"
 };
 
 document.querySelectorAll(".nav-item").forEach((button) => {
   button.addEventListener("click", () => {
     const view = button.dataset.view;
+    if (!view) return; // group toggles handle themselves
     document.querySelectorAll(".nav-item").forEach((item) => {
       const isActive = item === button;
       item.classList.toggle("active", isActive);
@@ -76,8 +81,34 @@ document.querySelectorAll(".nav-item").forEach((button) => {
       panel.classList.toggle("active", panel.dataset.viewPanel === view)
     );
     document.querySelector("#pageTitle").textContent = pageTitles[view];
+    syncNavGroups();
   });
 });
+
+// --- Nav groups (expandable submenu) ---
+function setNavGroupOpen(group, open) {
+  group.classList.toggle("open", open);
+  group.querySelector(".nav-group-toggle").setAttribute("aria-expanded", String(open));
+  group.querySelector(".nav-sub").hidden = !open;
+}
+
+document.querySelectorAll(".nav-group-toggle").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const group = btn.closest(".nav-group");
+    setNavGroupOpen(group, !group.classList.contains("open"));
+  });
+});
+
+// Highlight the parent group of the active subsection and make sure
+// it is expanded — deep links may activate a hidden subitem.
+function syncNavGroups() {
+  document.querySelectorAll(".nav-group").forEach((group) => {
+    const hasActive = !!group.querySelector(".nav-item.active");
+    group.classList.toggle("has-active", hasActive);
+    if (hasActive && !group.classList.contains("open")) setNavGroupOpen(group, true);
+  });
+}
+syncNavGroups();
 
 // --- Data ---
 const repos = [
@@ -249,6 +280,59 @@ const environments = [
   }
 ];
 
+// Snapshot used by Overview's cross-system row; kept in sync with the
+// values rendered in initPromCharts() further down.
+const promSummary = {
+  status: "watch",
+  label: "P99 latency 142ms (+12ms) · SLO 99.94% nominal"
+};
+
+const ocpPods = [
+  {
+    name: "api-gateway-7f9c8d6b45-x2kq9", app: "api-gateway", namespace: "api-gateway-prod",
+    node: "worker-03", image: "api-gateway:2.17.4", status: "Running", restarts: 0, age: "4d 2h",
+    lastRestart: null
+  },
+  {
+    name: "api-gateway-7f9c8d6b45-p8j1w", app: "api-gateway", namespace: "api-gateway-prod",
+    node: "worker-02", image: "api-gateway:2.17.4", status: "Running", restarts: 0, age: "4d 2h",
+    lastRestart: null
+  },
+  {
+    name: "api-gateway-canary-58f7c9d4b-w1x5y", app: "api-gateway", namespace: "api-gateway-staging",
+    node: "worker-03", image: "api-gateway:2.18.0-rc4", status: "Running", restarts: 2, age: "5h",
+    lastRestart: { time: "1h ago", reason: "Readiness probe failed", prevStatus: "Running", detail: "/healthz timed out during rollout" }
+  },
+  {
+    name: "order-workers-6c9f7d8b9c-k7m2p", app: "order-workers", namespace: "order-workers-prod",
+    node: "worker-01", image: "order-workers:1.9.2", status: "CrashLoopBackOff", restarts: 7, age: "1d 6h",
+    lastRestart: { time: "12m ago", reason: "OOMKilled", prevStatus: "Running", detail: "Memory limit 512Mi exceeded during batch rebalance" }
+  },
+  {
+    name: "order-workers-6c9f7d8b9c-n4d8x", app: "order-workers", namespace: "order-workers-prod",
+    node: "worker-02", image: "order-workers:1.9.2", status: "Running", restarts: 1, age: "1d 6h",
+    lastRestart: { time: "3h ago", reason: "Error", prevStatus: "Running", detail: "Exit code 1 — unhandled promise rejection" }
+  },
+  {
+    name: "order-workers-6c9f7d8b9c-q2w9e", app: "order-workers", namespace: "order-workers-staging",
+    node: "worker-04", image: "order-workers:1.9.2", status: "Running", restarts: 0, age: "2d 3h",
+    lastRestart: null
+  },
+  {
+    name: "platform-control-59d6f8c7b-t9v2r", app: "platform-control", namespace: "platform-control-prod",
+    node: "worker-01", image: "platform-control:3.4.0", status: "Running", restarts: 0, age: "9d 14h",
+    lastRestart: null
+  },
+  {
+    name: "admin-web-64b9d7f5c-m3q7z", app: "admin-web", namespace: "admin-web-staging",
+    node: "worker-04", image: "admin-web:0.9.1-rc2", status: "Pending", restarts: 0, age: "6h",
+    lastRestart: null
+  }
+];
+
+const ocpExpandedRows = {};
+const overviewOpen = { issues: false, pipeline: false };
+
 // --- Overview ---
 function renderOverview() {
   const openPRs      = workflow.filter((w) => w.status === "open");
@@ -257,17 +341,141 @@ function renderOverview() {
   const allActions   = Object.entries(actions).flatMap(([rid, runs]) => runs.map((r) => ({ ...r, repoId: rid })));
   const failedActs   = allActions.filter((a) => a.status === "failed");
   const watchingRepos = repos.filter((r) => r.health === "Watching lag");
-  const needsCount   = blockedPRs.length + failedActs.length + watchingRepos.length;
+  const hasFail = environments.some((e) => e.status === "failed");
+  const hasWarn = environments.some((e) => e.status === "warning");
+  const hasRun  = environments.some((e) => e.status === "running");
+  const ocpCritical = ocpPods.filter((p) => p.status === "CrashLoopBackOff" || p.status === "Error");
+  const ocpPending   = ocpPods.filter((p) => p.status === "Pending");
+  const ocpFlappy    = ocpPods.filter((p) => p.status === "Running" && p.lastRestart);
+  const needsCount   = blockedPRs.length + failedActs.length + watchingRepos.length + ocpCritical.length;
+
+  // Status banner — single glance verdict before anything else
+  let banner;
+  if (blockedPRs.length || failedActs.length || hasFail || ocpCritical.length) {
+    banner = {
+      sev: "problem", icon: "alert",
+      title: `${needsCount} issue${needsCount === 1 ? "" : "s"} need attention`,
+      sub: [
+        blockedPRs.length && `${blockedPRs.length} blocked PR${blockedPRs.length === 1 ? "" : "s"}`,
+        failedActs.length && `${failedActs.length} failed action${failedActs.length === 1 ? "" : "s"}`,
+        watchingRepos.length && `${watchingRepos.length} repo${watchingRepos.length === 1 ? "" : "s"} watching lag`,
+        ocpCritical.length && `${ocpCritical.length} pod${ocpCritical.length === 1 ? "" : "s"} crash-looping`
+      ].filter(Boolean).join(" · ")
+    };
+  } else if (watchingRepos.length || hasWarn || ocpPending.length || ocpFlappy.length) {
+    banner = {
+      sev: "watch", icon: "alert",
+      title: `${watchingRepos.length + ocpPending.length + ocpFlappy.length || 1} thing${(watchingRepos.length + ocpPending.length + ocpFlappy.length || 1) === 1 ? "" : "s"} worth watching`,
+      sub: [
+        watchingRepos.length && `Kafka lag on ${watchingRepos.map((r) => r.name).join(", ")}`,
+        ocpPending.length && `${ocpPending.length} pod${ocpPending.length === 1 ? "" : "s"} pending`,
+        ocpFlappy.length && `${ocpFlappy.length} pod${ocpFlappy.length === 1 ? "" : "s"} restarted recently`
+      ].filter(Boolean).join(" · ") || "Environment warning in pipeline"
+    };
+  } else if (hasRun) {
+    banner = {
+      sev: "running", icon: "pulse",
+      title: "Deploy in progress",
+      sub: `${environments.find((e) => e.status === "running")?.env || "Environment"} rolling out — nothing needs action yet`
+    };
+  } else {
+    banner = {
+      sev: "ok", icon: "test",
+      title: "All systems operational",
+      sub: "No blocked PRs, no failed actions, Kafka lag nominal"
+    };
+  }
+  // Issue rows shown when the banner is expanded — each deep-links to its section
+  const attentionItems = [
+    ...blockedPRs.map((pr) => ({ type: "blocked PR", color: "red", title: `${pr.id} — ${pr.title}`, sub: `${pr.repo} · ${pr.checks} checks · ${pr.author}`, view: "workflow", go: "PR Workflow" })),
+    ...failedActs.map((a)  => ({ type: "failed action", color: "red", title: `${a.run} ${a.workflow}`, sub: `${a.repoId} · ${a.branch} · ${a.time}`, view: "workflow", go: "PR Workflow" })),
+    ...ocpCritical.map((p) => ({ type: "pod crash", color: "red", title: p.name, sub: `${p.namespace} · ${p.lastRestart?.reason || p.status}`, view: "ocp", go: "OCP" })),
+    ...watchingRepos.map((r) => ({ type: "watch", color: "amber", title: r.name, sub: `Kafka lag · ${r.topics[0] || "—"}`, view: "kafka", go: "Kafka" }))
+  ];
+  const expandable = attentionItems.length > 0;
+
+  document.querySelector("#overviewStatus").innerHTML = `
+    <div class="status-banner status-banner--${banner.sev} ${expandable ? "status-banner--clickable" : ""}"
+         ${expandable ? `role="button" tabindex="0" aria-expanded="${overviewOpen.issues}"` : ""}>
+      <span class="status-banner-icon" data-icon="${banner.icon}"></span>
+      <div class="status-banner-body">
+        <strong>${banner.title}</strong>
+        <span>${banner.sub}</span>
+      </div>
+      <span class="status-banner-time">api-gateway · updated ${environments[0].time}</span>
+      ${expandable ? `<svg class="status-banner-chevron" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>` : ""}
+    </div>
+    ${expandable && overviewOpen.issues ? `
+      <div class="overview-expand">
+        ${attentionItems.map((item) => `
+          <button class="overview-expand-row" type="button" data-goto="${item.view}">
+            <span class="attention-type ${item.color}">${item.type}</span>
+            <div class="attention-body">
+              <strong>${item.title}</strong>
+              <span>${item.sub}</span>
+            </div>
+            <span class="expand-go">${item.go}<svg class="row-chevron" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></span>
+          </button>
+        `).join("")}
+      </div>
+    ` : ""}
+  `;
+  document.querySelectorAll("#overviewStatus [data-icon]").forEach((n) => { n.innerHTML = icons[n.dataset.icon] || ""; });
+
+  // System status — one glance across every connected system
+  const runningPods = ocpPods.filter((p) => p.status === "Running").length;
+  const systems = [
+    {
+      key: "github", label: "GitHub", icon: "github", view: "workflow",
+      sev: failedActs.length ? "problem" : blockedPRs.length ? "watch" : "ok",
+      sub: (failedActs.length || blockedPRs.length)
+        ? `${failedActs.length} failed action${failedActs.length === 1 ? "" : "s"} · ${blockedPRs.length} blocked PR${blockedPRs.length === 1 ? "" : "s"}`
+        : `${openPRs.length} open PRs · checks passing`
+    },
+    {
+      key: "kafka", label: "Kafka", icon: "stream", view: "kafka",
+      sev: watchingRepos.length ? "watch" : "ok",
+      sub: watchingRepos.length ? `Lag warning · ${watchingRepos.map((r) => r.name).join(", ")}` : "Consumer lag nominal"
+    },
+    {
+      key: "prometheus", label: "Prometheus", icon: "pulse", view: "prometheus",
+      sev: promSummary.status,
+      sub: promSummary.label
+    },
+    {
+      key: "ocp", label: "OCP", icon: "cloud", view: "ocp",
+      sev: ocpCritical.length ? "problem" : (ocpPending.length || ocpFlappy.length) ? "watch" : "ok",
+      sub: ocpCritical.length
+        ? `${ocpCritical.length} pod${ocpCritical.length === 1 ? "" : "s"} crash-looping`
+        : `${runningPods}/${ocpPods.length} pods running`
+    }
+  ];
+  document.querySelector("#systemStatus").innerHTML = systems.map((s) => `
+    <button class="system-chip system-chip--${s.sev}" type="button" data-goto="${s.view}"
+            aria-label="Open ${s.label} section">
+      <span class="system-chip-icon" data-icon="${s.icon}"></span>
+      <div class="system-chip-body">
+        <strong>${s.label}</strong>
+        <span>${s.sub}</span>
+      </div>
+      <svg class="system-chip-arrow" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+    </button>
+  `).join("");
+  document.querySelectorAll("#systemStatus [data-icon]").forEach((n) => { n.innerHTML = icons[n.dataset.icon] || ""; });
+  document.querySelectorAll("#systemStatus [data-goto]").forEach((chip) => {
+    chip.addEventListener("click", () => {
+      document.querySelector(`.nav-item[data-view="${chip.dataset.goto}"]`)?.click();
+    });
+  });
 
   // Hero — environment pipeline status
   const sDot  = { passed: "✓", failed: "✗", running: "↻", warning: "⚠" };
   const sDotC = { passed: "mint", failed: "red", running: "blue", warning: "amber" };
-  const hasFail = environments.some((e) => e.status === "failed");
-  const hasWarn = environments.some((e) => e.status === "warning");
-  const hasRun  = environments.some((e) => e.status === "running");
+  const envPill = { passed: "ready", failed: "blocked", running: "running", warning: "review" };
   const overallEnvStatus = hasFail ? "failed" : hasWarn ? "warning" : hasRun ? "running" : "passed";
   document.querySelector("#overviewHero").innerHTML = `
-    <div class="hero-strip hero-strip--${overallEnvStatus}">
+    <div class="hero-strip hero-strip--${overallEnvStatus} hero-strip--clickable"
+         role="button" tabindex="0" aria-expanded="${overviewOpen.pipeline}">
       <span class="hero-strip-dot hero-strip-dot--${sDotC[overallEnvStatus]}"></span>
       <span class="hero-strip-tag">Pipeline</span>
       <span class="hero-strip-sep"></span>
@@ -280,69 +488,71 @@ function renderOverview() {
         `).join("")}
       </div>
       <span class="hero-strip-dim">api-gateway · updated ${environments[0].time}</span>
+      <svg class="status-banner-chevron" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
     </div>
+    ${overviewOpen.pipeline ? `
+      <div class="overview-expand">
+        ${environments.map((env) => `
+          <button class="overview-expand-row" type="button" data-goto="deployments">
+            <span class="env-badge env-${env.id}">${env.label}</span>
+            <div class="attention-body">
+              <strong>${env.env}</strong>
+              <span>${env.branch} · run ${env.run} · ${env.time} · by ${env.triggeredBy}${env.duration !== "—" ? ` · ${env.duration}` : ""}</span>
+            </div>
+            <span class="pill ${envPill[env.status] || "neutral"}">${env.status}</span>
+            <span class="expand-go">Deployments<svg class="row-chevron" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></span>
+          </button>
+        `).join("")}
+      </div>
+    ` : ""}
   `;
+
+  // Toggle handlers for the expandable banner + pipeline strip
+  [["#overviewStatus .status-banner--clickable", "issues"],
+   ["#overviewHero .hero-strip--clickable", "pipeline"]].forEach(([sel, key]) => {
+    const el = document.querySelector(sel);
+    if (!el) return;
+    const flip = () => { overviewOpen[key] = !overviewOpen[key]; renderOverview(); };
+    el.addEventListener("click", flip);
+    el.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); flip(); } });
+  });
+
+  // Deep links from expanded rows into their sections
+  document.querySelectorAll("#overviewStatus .overview-expand [data-goto], #overviewHero .overview-expand [data-goto]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelector(`.nav-item[data-view="${btn.dataset.goto}"]`)?.click();
+    });
+  });
 
   // Metric cards
   const avgCI = Math.round(repos.reduce((s, r) => s + r.stats.ciPassRate, 0) / repos.length);
   document.querySelector("#overviewMetrics").innerHTML = `
-    <article class="metric-card">
-      <span class="metric-icon violet" data-icon="repo"></span>
+    <article class="metric-card ${watchingRepos.length ? "metric-card--watch" : ""}">
+      <span class="metric-icon ${watchingRepos.length ? "amber" : "violet"}" data-icon="repo"></span>
       <small>Connected repos</small>
       <strong>${repos.length}</strong>
       <p>${repos.map((r) => r.name.split("-")[0]).join(", ")}</p>
     </article>
-    <article class="metric-card">
-      <span class="metric-icon mint" data-icon="gitpull"></span>
+    <article class="metric-card ${blockedPRs.length ? "metric-card--alert" : ""}">
+      <span class="metric-icon ${blockedPRs.length ? "red" : "mint"}" data-icon="gitpull"></span>
       <small>Open PRs</small>
       <strong>${openPRs.length}</strong>
       <p>${readyPRs.length} ready · ${blockedPRs.length} blocked</p>
     </article>
-    <article class="metric-card">
-      <span class="metric-icon amber" data-icon="stream"></span>
+    <article class="metric-card ${watchingRepos.length ? "metric-card--watch" : ""}">
+      <span class="metric-icon ${watchingRepos.length ? "amber" : "blue"}" data-icon="stream"></span>
       <small>Kafka max lag</small>
       <strong>2.4k</strong>
       <p>orders-events-consumer</p>
     </article>
-    <article class="metric-card ${needsCount > 0 ? "metric-card--alert" : ""}">
-      <span class="metric-icon ${needsCount > 0 ? "red" : "blue"}" data-icon="${needsCount > 0 ? "pulse" : "test"}"></span>
-      <small>Needs action</small>
-      <strong>${needsCount}</strong>
-      <p>${needsCount > 0 ? `${blockedPRs.length} blocked · ${failedActs.length} failed` : "all good"}</p>
+    <article class="metric-card ${ocpCritical.length ? "metric-card--alert" : (ocpPending.length || ocpFlappy.length) ? "metric-card--watch" : ""}">
+      <span class="metric-icon ${ocpCritical.length ? "red" : (ocpPending.length || ocpFlappy.length) ? "amber" : "mint"}" data-icon="pod"></span>
+      <small>OCP pods</small>
+      <strong>${runningPods}/${ocpPods.length}</strong>
+      <p>${ocpCritical.length ? `${ocpCritical.length} crash-looping · ${ocpPending.length} pending` : ocpPending.length ? `${ocpPending.length} pending` : "all running"}</p>
     </article>
   `;
   document.querySelectorAll("#overviewMetrics [data-icon]").forEach((n) => { n.innerHTML = icons[n.dataset.icon] || ""; });
-
-  // Needs attention
-  const attentionEl = document.querySelector("#needsAttention");
-  if (!needsCount) { attentionEl.hidden = true; }
-  else {
-    attentionEl.hidden = false;
-    const items = [
-      ...blockedPRs.map((pr) => ({ type: "blocked PR", title: `${pr.id} — ${pr.title}`, sub: `${pr.repo} · ${pr.checks} checks · ${pr.author}`, color: "red" })),
-      ...failedActs.map((a)  => ({ type: "failed action", title: `${a.run} ${a.workflow}`, sub: `${a.repoId} · ${a.branch} · ${a.time}`, color: "red" })),
-      ...watchingRepos.map((r) => ({ type: "watch", title: r.name, sub: `Kafka lag · ${r.topics[0] || "—"}`, color: "amber" }))
-    ];
-    attentionEl.innerHTML = `
-      <section class="panel attention-panel">
-        <div class="panel-head">
-          <div><h2>Needs action</h2><p>Blockers, failures and states requiring intervention</p></div>
-          <span class="attention-badge">${items.length}</span>
-        </div>
-        <div class="attention-list">
-          ${items.map((item) => `
-            <div class="attention-item">
-              <span class="attention-type ${item.color}">${item.type}</span>
-              <div class="attention-body">
-                <strong>${item.title}</strong>
-                <span>${item.sub}</span>
-              </div>
-            </div>
-          `).join("")}
-        </div>
-      </section>
-    `;
-  }
 
   // Live feed — computed from real data
   const feedItems = [
@@ -410,7 +620,7 @@ let activeRepoId = null;
 
 function renderRepos() {
   document.querySelector("#repoGrid").innerHTML = repos.map((repo) => `
-    <article class="repo-card ${activeRepoId === repo.id ? "selected" : ""}"
+    <article class="repo-card ${repo.health === "Watching lag" ? "repo-card--watch" : ""} ${activeRepoId === repo.id ? "selected" : ""}"
              data-repo-id="${repo.id}" role="button" tabindex="0" aria-expanded="${activeRepoId === repo.id}">
       <div class="repo-top">
         <span class="repo-mark ${repo.color}">${repo.name.slice(0, 2).toUpperCase()}</span>
@@ -782,7 +992,7 @@ function renderWorkflowPanels() {
 renderWorkflowFilters();
 renderWorkflowPanels();
 renderDeployments();
-initPromCharts();
+renderOcp();
 
 // --- Deployments ---
 function renderDeployments() {
@@ -863,6 +1073,115 @@ function renderDeployments() {
       const id = row.dataset.deployId;
       deployExpandedRows[id] = !deployExpandedRows[id];
       renderDeployments();
+    });
+  });
+}
+
+// --- OCP pods ---
+function renderOcp() {
+  const container = document.querySelector("#ocpPods");
+  if (!container) return;
+
+  const running     = ocpPods.filter((p) => p.status === "Running").length;
+  const crashing    = ocpPods.filter((p) => p.status === "CrashLoopBackOff" || p.status === "Error").length;
+  const pending     = ocpPods.filter((p) => p.status === "Pending").length;
+  const restarts24h = ocpPods.reduce((s, p) => s + p.restarts, 0);
+  const namespaces  = new Set(ocpPods.map((p) => p.namespace)).size;
+
+  document.querySelector("#ocpSummary").innerHTML = `
+    <div class="panel detail-stats" style="margin-bottom:14px">
+      <div class="detail-stat">
+        <span class="detail-stat-label">Pods running</span>
+        <strong class="detail-stat-value ${crashing ? "amber" : "mint"}">${running} / ${ocpPods.length}</strong>
+        <span class="detail-stat-sub">across ${namespaces} namespaces</span>
+      </div>
+      <div class="detail-stat">
+        <span class="detail-stat-label">Crash-looping</span>
+        <strong class="detail-stat-value ${crashing ? "red" : "mint"}">${crashing}</strong>
+        <span class="detail-stat-sub">${crashing ? "needs attention" : "none"}</span>
+      </div>
+      <div class="detail-stat">
+        <span class="detail-stat-label">Pending</span>
+        <strong class="detail-stat-value ${pending ? "amber" : "mint"}">${pending}</strong>
+        <span class="detail-stat-sub">scheduling / image pull</span>
+      </div>
+      <div class="detail-stat">
+        <span class="detail-stat-label">Restarts (recent)</span>
+        <strong class="detail-stat-value ${restarts24h ? "amber" : "mint"}">${restarts24h}</strong>
+        <span class="detail-stat-sub">across all pods</span>
+      </div>
+    </div>
+  `;
+
+  const sc = { Running: "ready", CrashLoopBackOff: "blocked", Error: "blocked", Pending: "review" };
+
+  container.innerHTML = `
+    <section class="panel">
+      <div class="panel-head">
+        <div><h2>Pods</h2><p>${ocpPods.length} pods · ${namespaces} namespaces</p></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Pod</th>
+              <th>Namespace</th>
+              <th>Node</th>
+              <th>Restarts</th>
+              <th>Age</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${ocpPods.map((pod) => {
+              const open = ocpExpandedRows[pod.name];
+              return `
+                <tr class="row-clickable ${open ? "row-expanded" : ""}" data-pod-id="${pod.name}">
+                  <td>
+                    <strong>${pod.app}</strong>
+                    <span>${pod.name}</span>
+                  </td>
+                  <td>${pod.namespace}</td>
+                  <td>${pod.node}</td>
+                  <td>${pod.restarts ? `<strong style="color:var(--amber)">${pod.restarts}</strong>` : "0"}</td>
+                  <td>${pod.age}</td>
+                  <td>
+                    <div class="td-chevron-wrap">
+                      <span class="pill ${sc[pod.status] || "neutral"}">${pod.status}</span>
+                      <svg class="row-chevron" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+                    </div>
+                  </td>
+                </tr>
+                ${open ? `
+                  <tr class="expand-row">
+                    <td colspan="6">
+                      <div class="row-expand">
+                        <div class="expand-meta-bar">
+                          <span><b>Image</b>${pod.image}</span>
+                          <span><b>Node</b>${pod.node}</span>
+                        </div>
+                        ${pod.lastRestart ? `
+                          <p class="expand-desc">
+                            <strong>Last restart ${pod.lastRestart.time}</strong> — ${pod.lastRestart.reason}, was <strong>${pod.lastRestart.prevStatus}</strong> before. ${pod.lastRestart.detail}.
+                          </p>
+                        ` : `<p class="expand-desc">No restarts — stable since creation.</p>`}
+                      </div>
+                    </td>
+                  </tr>
+                ` : ""}
+              `;
+            }).join("")}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  `;
+
+  container.querySelectorAll(".row-clickable").forEach((row) => {
+    row.addEventListener("click", () => {
+      const id = row.dataset.podId;
+      ocpExpandedRows[id] = !ocpExpandedRows[id];
+      renderOcp();
     });
   });
 }
@@ -988,3 +1307,5 @@ document.querySelectorAll(".nav-item").forEach(btn => {
     });
   }
 });
+
+initPromCharts();

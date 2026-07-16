@@ -82,12 +82,31 @@
 
         <nav class="nav-list" aria-label="Panel sections">
           <button class="nav-item active" type="button" data-view="overview" aria-current="page"><span data-icon="home"></span>Overview</button>
-          <button class="nav-item" type="button" data-view="repos"><span data-icon="repo"></span>Repositories</button>
-          <button class="nav-item" type="button" data-view="workflow"><span data-icon="gitpull"></span>PR Workflow</button>
+
+          <div class="nav-group" data-group="github">
+            <button class="nav-item nav-group-toggle" type="button" aria-expanded="false">
+              <span data-icon="github"></span>
+              <span class="nav-group-label">GitHub<svg class="nav-group-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></span>
+            </button>
+            <div class="nav-sub" hidden>
+              <button class="nav-item nav-subitem" type="button" data-view="repos"><span data-icon="repo"></span>Repositories</button>
+              <button class="nav-item nav-subitem" type="button" data-view="workflow"><span data-icon="gitpull"></span>PR Workflow</button>
+            </div>
+          </div>
+
           <button class="nav-item" type="button" data-view="kafka"><span data-icon="stream"></span>Kafka</button>
           <button class="nav-item" type="button" data-view="prometheus"><span data-icon="pulse"></span>Prometheus</button>
-          <button class="nav-item" type="button" data-view="tdd"><span data-icon="test"></span>TDD</button>
-          <button class="nav-item" type="button" data-view="deployments"><span data-icon="layers"></span>Deployments</button>
+
+          <div class="nav-group" data-group="ocp">
+            <button class="nav-item nav-group-toggle" type="button" aria-expanded="false">
+              <span data-icon="cloud"></span>
+              <span class="nav-group-label">OCP<svg class="nav-group-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></span>
+            </button>
+            <div class="nav-sub" hidden>
+              <button class="nav-item nav-subitem" type="button" data-view="ocp"><span data-icon="pod"></span>Pods</button>
+              <button class="nav-item nav-subitem" type="button" data-view="deployments"><span data-icon="layers"></span>Deployments</button>
+            </div>
+          </div>
         </nav>
 
         <div class="sidebar-user">
@@ -125,9 +144,10 @@
         </header>
 
         <section class="view active" data-view-panel="overview" aria-labelledby="pageTitle">
+          <div id="overviewStatus"></div>
+          <div class="system-grid" id="systemStatus"></div>
           <div id="overviewHero"></div>
           <div class="metric-grid" id="overviewMetrics"></div>
-          <div id="needsAttention"></div>
           <div class="overview-grid">
             <section class="panel">
               <div class="panel-head">
@@ -164,7 +184,6 @@
 
         <section class="view" data-view-panel="workflow">
           <div class="page-intro">
-            <h2>PR Workflow</h2>
             <p>Filter by repository — show panels for one or more repos at a time.</p>
           </div>
           <div id="workflowFilters"></div>
@@ -173,7 +192,6 @@
 
         <section class="view" data-view-panel="kafka">
           <div class="page-intro">
-            <h2>Kafka Monitoring</h2>
             <p>Topics, consumer groups, lag and a quick look at streams that may block a release.</p>
           </div>
           <div class="split-grid">
@@ -194,7 +212,6 @@
 
         <section class="view" data-view-panel="prometheus">
           <div class="page-intro">
-            <h2>Prometheus Metrics</h2>
             <p>SLO, burn rate, error ratio and latency — api-gateway.</p>
           </div>
 
@@ -255,22 +272,16 @@
           </section>
         </section>
 
-        <section class="view" data-view-panel="tdd">
+        <section class="view" data-view-panel="ocp">
           <div class="page-intro">
-            <h2>TDD Overview</h2>
-            <p>Test pyramid, failing suites, flaky tests and release confidence.</p>
+            <p>Pods across environments — status, restarts and the reason for the last restart.</p>
           </div>
-          <div class="test-grid">
-            <article class="panel test-card"><small>Unit</small><strong>1,248</strong><p>0 failed</p></article>
-            <article class="panel test-card"><small>Integration</small><strong>216</strong><p>0 failed</p></article>
-            <article class="panel test-card"><small>Contract</small><strong>74</strong><p>0 failed</p></article>
-            <article class="panel test-card warning"><small>Flaky</small><strong>3</strong><p>needs attention</p></article>
-          </div>
+          <div id="ocpSummary"></div>
+          <div id="ocpPods"></div>
         </section>
 
         <section class="view" data-view-panel="deployments">
           <div class="page-intro">
-            <h2>Deployments</h2>
             <p>Environment pipeline for api-gateway — dev through prod. Click a row to expand jobs.</p>
           </div>
           <div id="deploymentsView"></div>
